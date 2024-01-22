@@ -1,7 +1,12 @@
 from pyrcareworld.envs import RCareWorld
 import numpy as np
 import pybullet as p
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+from matplotlib.colors import Normalize
 import math
+
+from pyrcareworld.utils.skeleton_visualizer import SkeletonVisualizer
 
 
 class SkeletonEnv(RCareWorld):
@@ -28,6 +33,7 @@ class SkeletonEnv(RCareWorld):
         ini_world_rot = self.init_pose_obj.getQuaternion()
         self.robot.moveTo(ini_world_pose, ini_world_rot)
         self.skin = self.create_skin(id=114514, name="Skin", is_in_scene=True)
+        self.visualizer = SkeletonVisualizer()
 
     def step(self):
         pose = self.init_pose_obj.getPosition()
@@ -35,7 +41,7 @@ class SkeletonEnv(RCareWorld):
         self.robot.moveTo(pose, rot)
         skin_info = self.skin.getInfo()
 
-        force_on_skeleton = {}
+        force_on_skeleton = {i: 0 for i in range(7)}
         for i in range(len(skin_info["skeleton_ids"])):
             skeleton_id = skin_info["skeleton_ids"][i]
             if skeleton_id == -1:
@@ -47,15 +53,20 @@ class SkeletonEnv(RCareWorld):
           
         if (not hasattr(self, "prev_force_on_skeleton") or force_on_skeleton != self.prev_force_on_skeleton):
           print("Forces along IDs are now:", force_on_skeleton)
+          self.visualizer.update(force_on_skeleton)
 
         self.prev_force_on_skeleton = force_on_skeleton
         self._step()
-
+        
     def demo(self):
         for i in range(10000000):
             self.step()
+    
+    def start_visualizer(self):
+        self.visualizer.show()
 
 
 if __name__ == "__main__":
     env = SkeletonEnv()
+    env.start_visualizer()
     env.demo()
