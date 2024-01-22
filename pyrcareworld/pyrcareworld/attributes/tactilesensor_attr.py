@@ -17,4 +17,5 @@ def parse_message(msg: IncomingMessage) -> dict:
     # TODO: Add normal vectors
     count = msg.read_int32()
     this_object_data["ids"] = [msg.read_int32() for _ in range(count)]
+    this_object_data["skeleton_ids"] = list(map(lambda fl : round(fl), msg.read_float32_list()))
     return this_object_data

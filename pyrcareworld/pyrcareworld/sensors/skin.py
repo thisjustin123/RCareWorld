@@ -24,6 +24,7 @@ class Skin(RCareWorldBaseObject):
         info_dict["forces"] = self.env.instance_channel.data[self.id]["forces"]
         info_dict["positions"] = self.env.instance_channel.data[self.id]["positions"]
         info_dict["ids"] = self.env.instance_channel.data[self.id]["ids"]
+        info_dict["skeleton_ids"] = self.env.instance_channel.data[self.id]["skeleton_ids"]
         return info_dict
 
     def getInfoByID(self, this_id: int) -> dict:
