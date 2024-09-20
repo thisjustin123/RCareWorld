@@ -8,6 +8,7 @@ import pyrcareworld.attributes.rigidbody_attr
 import pyrcareworld.attributes.cloth_attr
 import pyrcareworld.attributes.humanbody_attr
 import pyrcareworld.attributes.graspsim_attr
+import pyrcareworld.attributes.pointcloudviz_attr
 import pyrcareworld.attributes.pointcloud_attr
 import pyrcareworld.attributes.custom_attr
 import pyrcareworld.attributes.rcarecontroller_attr
@@ -26,6 +27,7 @@ __all__ = [
     "humanbody_attr",
     "graspsim_attr",
     "pointcloud_attr",
+    "pointcloudviz_attr",
     "custom_attr",
     "rcarecontroller_attr",
     "humanarticulation_attr",
