@@ -26,5 +26,7 @@ if __name__ == "__main__":
         handoff_pos=HANDOFF_POS,
         human_end_pos=HUMAN_END_POS,
         obj_grab_offset=OBJ_GRASP_OFFSET,
+        # To visualize a real point cloud, pass it in here.
+        point_cloud=np.load("pyrcareworld/Test/evaluate_human_fk.npy"),
     )
     env.demo()

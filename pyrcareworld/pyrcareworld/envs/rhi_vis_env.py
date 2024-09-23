@@ -15,6 +15,7 @@ class RhiVisEnv(RCareWorld):
         self,
         executable_file: str = None,
         scene_file: str = None,
+        point_cloud: np.ndarray = None,
         start_pos: list = [0, 0, 0],
         end_pos: list = [0, 0, 0],
         handoff_pos: list = [0, 0, 0],
@@ -33,6 +34,7 @@ class RhiVisEnv(RCareWorld):
         self.end_pos = end_pos
         self.handoff_pos = handoff_pos
         self.human_end_pos = human_end_pos
+        self.point_cloud = point_cloud
         self.obj_grab_offset = obj_grab_offset
         self.person = self.create_human(id=85042, name="Human", is_in_scene=True)
         self.cloud_manager = PointCloudManager(
@@ -89,12 +91,17 @@ class RhiVisEnv(RCareWorld):
         # Here's where you'd visualize point cloud.
 
         # TODO: Vis point cloud.
-
         self.cloud_manager.set_radius(radius=0.3)
-        self.cloud_manager.make_cloud(
-            points=self.generate_random_points() + np.array([0.1, 0.35, -0.5]),
-            name="cloud",
-        )
+        if self.point_cloud is not None:
+            self.cloud_manager.make_cloud(
+                points=self.point_cloud.tolist(),
+                name="cloud",
+            )
+        else:
+            self.cloud_manager.make_cloud(
+                points=self.generate_random_points() + np.array([0.1, 0.35, -0.5]),
+                name="cloud",
+            )
 
         for _ in range(100):
             robot.directlyMoveTo(pos)
