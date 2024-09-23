@@ -35,6 +35,9 @@ class RhiVisEnv(RCareWorld):
         self.human_end_pos = human_end_pos
         self.obj_grab_offset = obj_grab_offset
         self.person = self.create_human(id=85042, name="Human", is_in_scene=True)
+        self.cloud_manager = PointCloudManager(
+            env=self, id=100, name="RCareWorld", is_in_scene=True
+        )
         self.list = []
 
     def generate_random_points(self, count: int = 100):
@@ -56,9 +59,6 @@ class RhiVisEnv(RCareWorld):
         return np.array(list) / 5
 
     def demo(self):
-        cloud_manager = PointCloudManager(
-            env=self, id=100, name="RCareWorld", is_in_scene=True
-        )
         robot: Robot = self.create_robot(
             id=221584,
             robot_name="kinova_gen3_7dof-robotiq85",
@@ -90,8 +90,8 @@ class RhiVisEnv(RCareWorld):
 
         # TODO: Vis point cloud.
 
-        cloud_manager.set_radius(radius=0.3)
-        cloud_manager.make_cloud(
+        self.cloud_manager.set_radius(radius=0.3)
+        self.cloud_manager.make_cloud(
             points=self.generate_random_points() + np.array([0.1, 0.35, -0.5]),
             name="cloud",
         )
@@ -108,7 +108,7 @@ class RhiVisEnv(RCareWorld):
             robot.directlyMoveTo(pos)
             self.step()
 
-        cloud_manager.remove_cloud(name="cloud")
+        self.cloud_manager.remove_cloud(name="cloud")
 
         # Here's where the human should grab the object.
 
@@ -154,18 +154,13 @@ class RhiVisEnv(RCareWorld):
 
         self.list.append(self.person.getJointPositionByName("RightHand"))
 
-    def fk_vis_and_close(self, save: bool = False):
+    def fk_end(self, save: bool = False, visualize: bool = False):
         as_np = np.array(self.list)
-
-        cloud_manager = PointCloudManager(
-            env=self, id=100, name="RCareWorld", is_in_scene=True
-        )
-
-        cloud_manager.make_cloud(points=as_np, name="cloud")
 
         if save:
             # Save as_np as a file named evaluate_human_fk.npy
             np.save("pyrcareworld/Test/evaluate_human_fk.npy", as_np)
 
-        for _ in range(300):
-            self.step()
+        if visualize:
+            for _ in range(300):
+                self.step()

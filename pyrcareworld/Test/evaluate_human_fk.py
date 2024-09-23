@@ -21,4 +21,12 @@ if __name__ == "__main__":
             elbow_angles=[elbow, 0, 0],
         )
 
-    env.fk_vis_and_close(save=True)
+    env.fk_end(save=True, visualize=False)
+
+    # Read pyrcareworld/Test/evaluate_human_fk.npy
+    as_np = np.load("pyrcareworld/Test/evaluate_human_fk.npy")
+    # Demo: Can read points afterwards.
+    env.cloud_manager.make_cloud(points=as_np, name="Human FK")
+
+    for _ in range(300):
+        env.step()
