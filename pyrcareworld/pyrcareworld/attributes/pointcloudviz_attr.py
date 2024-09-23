@@ -12,13 +12,13 @@ def parse_message(msg: IncomingMessage) -> dict:
 
 
 def MakeCloud(kwargs: dict) -> OutgoingMessage:
-    compulsory_params = ["id", "positions"]
+    compulsory_params = ["id", "positions", "name"]
     utility.CheckKwargs(kwargs, compulsory_params)
     msg = OutgoingMessage()
     msg.write_int32(kwargs["id"])
     msg.write_string("MakeCloud")
-    print(kwargs["positions"])
     msg.write_float32_list(kwargs["positions"])
+    msg.write_string(kwargs["name"])
     return msg
 
 
@@ -39,4 +39,14 @@ def SetCloudPos(kwargs: dict) -> OutgoingMessage:
     msg.write_int32(kwargs["id"])
     msg.write_string("SetCloudPos")
     msg.write_float32_list(kwargs["position"])
+    return msg
+
+
+def RemoveCloud(kwargs: dict) -> OutgoingMessage:
+    compulsory_params = ["id", "name"]
+    utility.CheckKwargs(kwargs, compulsory_params)
+    msg = OutgoingMessage()
+    msg.write_int32(kwargs["id"])
+    msg.write_string("RemoveCloud")
+    msg.write_string(kwargs["name"])
     return msg

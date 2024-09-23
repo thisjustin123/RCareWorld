@@ -10,7 +10,7 @@ class PointCloudManager(RCareWorldBaseObject):
     def __init__(self, env, id: int, name: str, is_in_scene: bool = False):
         super().__init__(env=env, id=id, name=name, is_in_scene=is_in_scene)
 
-    def make_cloud(self, points: list):
+    def make_cloud(self, points: list, name: str):
         """
         Makes a point cloud.
 
@@ -18,7 +18,10 @@ class PointCloudManager(RCareWorldBaseObject):
             points: A list of 3D points, relative to the point cloud. The point cloud starts at (0, 0, 0), unless `set_cloud_pos` is called.
         """
         self.env.instance_channel.set_action(
-            "MakeCloud", id=self.id, positions=np.array(points).reshape(-1).tolist()
+            "MakeCloud",
+            id=self.id,
+            positions=np.array(points).reshape(-1).tolist(),
+            name=name,
         )
 
     def set_cloud_pos(self, pos: list):
@@ -38,3 +41,12 @@ class PointCloudManager(RCareWorldBaseObject):
             radius: The radius of the point cloud.
         """
         self.env.instance_channel.set_action("SetRadius", id=self.id, radius=radius)
+
+    def remove_cloud(self, name: str):
+        """
+        Removes a point cloud.
+
+        Args:
+            name: The name of the point cloud.
+        """
+        self.env.instance_channel.set_action("RemoveCloud", id=self.id, name=name)

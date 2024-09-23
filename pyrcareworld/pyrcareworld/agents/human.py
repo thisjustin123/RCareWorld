@@ -274,11 +274,18 @@ class Human(RCareWorldBaseObject):
         self.env.instance_channel.set_action(
             "SaveArticulationBoneData", id=self.id, path=path
         )
-    
+
     def enableSoftBody(self):
         """
         TODO: enable soft body
         """
-        self.env.instance_channel.set_action(
-            "EnableSoftBody", id=self.id
-        )
+        self.env.instance_channel.set_action("EnableSoftBody", id=self.id)
+
+    def gripper_close(self):
+        self.env.instance_channel.set_action("GripperClose", id=self.id)
+
+    def gripper_open(self):
+        self.env.instance_channel.set_action("GripperOpen", id=self.id)
+
+    def ik_move_to(self, position: list):
+        self.env.instance_channel.set_action("IKMoveTo", id=self.id, position=position)

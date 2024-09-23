@@ -145,3 +145,45 @@ def SaveArticulationBoneData(kwargs: dict) -> OutgoingMessage:
     msg.write_string(kwargs["path"])
 
     return msg
+
+
+def GripperOpen(kwargs: dict) -> OutgoingMessage:
+    compulsory_params = ["id"]
+    optional_params = []
+    utility.CheckKwargs(kwargs, compulsory_params)
+
+    msg = OutgoingMessage()
+
+    msg.write_int32(kwargs["id"])
+    msg.write_string("GripperOpen")
+
+    return msg
+
+
+def GripperClose(kwargs: dict) -> OutgoingMessage:
+    compulsory_params = ["id"]
+    optional_params = []
+    utility.CheckKwargs(kwargs, compulsory_params)
+
+    msg = OutgoingMessage()
+
+    msg.write_int32(kwargs["id"])
+    msg.write_string("GripperClose")
+
+    return msg
+
+
+def IKMoveTo(kwargs: dict) -> OutgoingMessage:
+    compulsory_params = ["id", "position"]
+    optional_params = []
+    utility.CheckKwargs(kwargs, compulsory_params)
+
+    msg = OutgoingMessage()
+
+    msg.write_int32(kwargs["id"])
+    msg.write_string("IKMoveTo")
+    msg.write_float32(kwargs["position"][0])
+    msg.write_float32(kwargs["position"][1])
+    msg.write_float32(kwargs["position"][2])
+
+    return msg
