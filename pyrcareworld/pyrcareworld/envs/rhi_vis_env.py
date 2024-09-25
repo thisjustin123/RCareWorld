@@ -211,6 +211,45 @@ class RhiVisEnv(RCareWorld):
             robot.directlyMoveTo(end_pos)
             self.step()
 
+    def demo_bathing(self):
+        robot: Robot = self.create_robot(
+            id=221584,
+            robot_name="kinova_gen3_7dof-robotiq85",
+            base_pos=[-0.425999999, 0.619000018, 0.606999993],
+            gripper_list=[221584],
+        )
+        CLOUD_OFFSET = np.array([0.187999994, 1.18200004, -0.44600001])
+        GRASP_POINT = np.array([-0.108999997, 0.742999971, 0.361000001])
+        cloud = self.point_cloud
+        cloud = rotate_matrix(
+            cloud,
+            x_angle=0,
+            y_angle=180,
+            z_angle=0,
+        )
+        cloud = rotate_matrix(
+            cloud,
+            x_angle=0,
+            y_angle=0,
+            z_angle=-90,
+        )
+        cloud += CLOUD_OFFSET
+        self.cloud_manager.make_cloud(points=cloud, name="Human FK")
+
+        for _ in range(30):
+            robot.directlyMoveTo(GRASP_POINT)
+            self.step()
+
+        robot.directlyMoveTo(GRASP_POINT)
+        robot.GripperClose()
+
+        for _ in range(30):
+            self.step()
+
+        while True:
+            robot.directlyMoveTo(GRASP_POINT)
+            self.step()
+
     def demo_dressing(self):
         robot: Robot = self.create_robot(
             id=221584,
