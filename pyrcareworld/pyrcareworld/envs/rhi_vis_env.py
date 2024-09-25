@@ -10,6 +10,48 @@ def lerp(a, b, t):
     return a + (b - a) * t
 
 
+def rotate_matrix(points, x_angle, y_angle, z_angle):
+    # Convert angles from degrees to radians
+    x_rad = np.radians(x_angle)
+    y_rad = np.radians(y_angle)
+    z_rad = np.radians(z_angle)
+
+    # Rotation matrix around the X axis
+    Rx = np.array(
+        [
+            [1, 0, 0],
+            [0, np.cos(x_rad), -np.sin(x_rad)],
+            [0, np.sin(x_rad), np.cos(x_rad)],
+        ]
+    )
+
+    # Rotation matrix around the Y axis
+    Ry = np.array(
+        [
+            [np.cos(y_rad), 0, np.sin(y_rad)],
+            [0, 1, 0],
+            [-np.sin(y_rad), 0, np.cos(y_rad)],
+        ]
+    )
+
+    # Rotation matrix around the Z axis
+    Rz = np.array(
+        [
+            [np.cos(z_rad), -np.sin(z_rad), 0],
+            [np.sin(z_rad), np.cos(z_rad), 0],
+            [0, 0, 1],
+        ]
+    )
+
+    # Combined rotation matrix
+    R = np.dot(Rz, np.dot(Ry, Rx))
+
+    # Apply the rotation matrix to the points
+    rotated_points = np.dot(points, R.T)
+
+    return rotated_points
+
+
 class RhiVisEnv(RCareWorld):
     def __init__(
         self,
@@ -40,7 +82,27 @@ class RhiVisEnv(RCareWorld):
         self.cloud_manager = PointCloudManager(
             env=self, id=100, name="RCareWorld", is_in_scene=True
         )
+        self.cloud_manager.set_radius(0.3)
+        self.point_cloud = self.load_point_cloud()
         self.list = []
+
+    def load_point_cloud(self):
+        as_np = np.load("pyrcareworld/Test/evaluate_human_fk.npy")
+        rotation_matrix = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
+        as_np = np.matmul(rotation_matrix, as_np.T).T
+        rotation_matrix_z = np.array([[0, 1, 0], [-1, 0, 0], [0, 0, 1]])
+        as_np = np.matmul(rotation_matrix_z, as_np.T).T
+        as_np[:, 2] = -as_np[:, 2]
+        theta = np.radians(30)  # Convert 30 degrees to radians
+        rotation_matrix = np.array(
+            [
+                [np.cos(theta), -np.sin(theta), 0],
+                [np.sin(theta), np.cos(theta), 0],
+                [0, 0, 1],
+            ]
+        )
+        as_np = np.matmul(rotation_matrix, as_np.T).T
+        return as_np
 
     def generate_random_points(self, count: int = 100):
         """
@@ -93,6 +155,8 @@ class RhiVisEnv(RCareWorld):
         # TODO: Vis point cloud.
         self.cloud_manager.set_radius(radius=0.3)
         if self.point_cloud is not None:
+            CLOUD_OFFSET = np.array([0.54, 0.25, 0])
+            self.point_cloud = self.point_cloud + CLOUD_OFFSET
             self.cloud_manager.make_cloud(
                 points=self.point_cloud.tolist(),
                 name="cloud",
@@ -145,6 +209,43 @@ class RhiVisEnv(RCareWorld):
 
         for i in range(300):
             robot.directlyMoveTo(end_pos)
+            self.step()
+
+    def demo_dressing(self):
+        robot: Robot = self.create_robot(
+            id=221584,
+            robot_name="kinova_gen3_7dof-robotiq85",
+            base_pos=[-0.231, 0, 0],
+            gripper_list=[221584],
+        )
+        CLOUD_OFFSET = np.array([-0.36, 0.44, -0.41])
+        GRASP_POINT = np.array([0.00300000003, 0.358999999, 0.583999991])
+        CLOTH_GRASP_GOAL = GRASP_POINT + np.array([0, 1, 0])
+        cloud = rotate_matrix(
+            self.point_cloud,
+            x_angle=0,
+            y_angle=-150,
+            z_angle=0,
+        )
+        cloud += CLOUD_OFFSET
+        self.cloud_manager.make_cloud(points=cloud, name="Human FK")
+
+        for _ in range(30):
+            robot.directlyMoveTo(GRASP_POINT)
+            self.step()
+
+        robot.directlyMoveTo(GRASP_POINT)
+        robot.GripperClose()
+
+        for _ in range(30):
+            self.step()
+
+        for i in range(300):
+            robot.directlyMoveTo(lerp(GRASP_POINT, CLOTH_GRASP_GOAL, i / 300))
+            self.step()
+
+        while True:
+            robot.directlyMoveTo(CLOTH_GRASP_GOAL)
             self.step()
 
     def fk_step(

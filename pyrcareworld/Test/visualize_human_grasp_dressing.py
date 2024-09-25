@@ -5,6 +5,7 @@ import numpy as np
 
 from pyrcareworld.agents.robot import Robot
 from pyrcareworld.envs.rhi_vis_env import RhiVisEnv
+from pyrcareworld.envs.rhi_vis_env import rotate_matrix
 
 
 def lerp(a, b, t):
@@ -27,6 +28,5 @@ if __name__ == "__main__":
         handoff_pos=HANDOFF_POS,
         human_end_pos=HUMAN_END_POS,
         obj_grab_offset=OBJ_GRASP_OFFSET,
-        point_cloud="vis",
     )
-    env.demo()
+    env.demo_dressing()
