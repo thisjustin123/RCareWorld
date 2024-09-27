@@ -64,6 +64,7 @@ class RhiVisEnv(RCareWorld):
         human_end_pos: list = [0, 0, 0],
         obj_grab_offset: list = [0, 0, 0],
         point_cloud_path: str = None,
+        output_file: str = "pyrcareworld/Test/evaluate_human_fk.npy",
         **kwargs
     ):
         RCareWorld.__init__(
@@ -75,6 +76,7 @@ class RhiVisEnv(RCareWorld):
 
         self.start_pos = start_pos
         self.end_pos = end_pos
+        self.output_file = output_file
         self.handoff_pos = handoff_pos
         self.human_end_pos = human_end_pos
         self.point_cloud = point_cloud
@@ -344,7 +346,7 @@ class RhiVisEnv(RCareWorld):
 
         if save:
             # Save as_np as a file named evaluate_human_fk.npy
-            np.save("pyrcareworld/Test/evaluate_human_fk.npy", as_np)
+            np.save(self.output_file, as_np)
 
         if visualize:
             for _ in range(300):
