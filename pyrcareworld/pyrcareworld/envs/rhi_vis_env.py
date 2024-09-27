@@ -63,6 +63,7 @@ class RhiVisEnv(RCareWorld):
         handoff_pos: list = [0, 0, 0],
         human_end_pos: list = [0, 0, 0],
         obj_grab_offset: list = [0, 0, 0],
+        point_cloud_path: str = None,
         **kwargs
     ):
         RCareWorld.__init__(
@@ -83,11 +84,13 @@ class RhiVisEnv(RCareWorld):
             env=self, id=100, name="RCareWorld", is_in_scene=True
         )
         self.cloud_manager.set_radius(0.3)
-        self.point_cloud = self.load_point_cloud()
+        self.point_cloud_path = point_cloud_path
+        if point_cloud_path is not None:
+            self.point_cloud = self.load_point_cloud()
         self.list = []
 
     def load_point_cloud(self):
-        as_np = np.load("pyrcareworld/Test/evaluate_human_fk.npy")
+        as_np = np.load(self.point_cloud_path)
         rotation_matrix = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
         as_np = np.matmul(rotation_matrix, as_np.T).T
         rotation_matrix_z = np.array([[0, 1, 0], [-1, 0, 0], [0, 0, 1]])
@@ -153,17 +156,35 @@ class RhiVisEnv(RCareWorld):
         # Here's where you'd visualize point cloud.
 
         # TODO: Vis point cloud.
-        self.cloud_manager.set_radius(radius=0.3)
+        self.cloud_manager.set_radius(radius=0.5)
         if self.point_cloud is not None:
-            CLOUD_OFFSET = np.array([0.54, 0.25, 0])
+            CLOUD_OFFSET = np.array([0.34, 0.45, -0.03])
+            as_np = self.point_cloud
+            rotation_matrix = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
+            as_np = np.matmul(rotation_matrix, as_np.T).T
+            rotation_matrix_z = np.array([[0, 1, 0], [-1, 0, 0], [0, 0, 1]])
+            as_np = np.matmul(rotation_matrix_z, as_np.T).T
+            as_np[:, 2] = -as_np[:, 2]
+            theta = np.radians(30)  # Convert 30 degrees to radians
+            rotation_matrix = np.array(
+                [
+                    [np.cos(theta), -np.sin(theta), 0],
+                    [np.sin(theta), np.cos(theta), 0],
+                    [0, 0, 1],
+                ]
+            )
+            as_np = np.matmul(rotation_matrix, as_np.T).T
+
+            as_np += CLOUD_OFFSET
             self.point_cloud = self.point_cloud + CLOUD_OFFSET
             self.cloud_manager.make_cloud(
-                points=self.point_cloud.tolist(),
+                points=as_np.tolist(),
                 name="cloud",
             )
         else:
+            CLOUD_OFFSET = np.array([0.54, 0.25, 0])
             self.cloud_manager.make_cloud(
-                points=self.generate_random_points() + np.array([0.1, 0.35, -0.5]),
+                points=self.generate_random_points() + CLOUD_OFFSET,
                 name="cloud",
             )
 
@@ -257,7 +278,7 @@ class RhiVisEnv(RCareWorld):
             base_pos=[-0.231, 0, 0],
             gripper_list=[221584],
         )
-        CLOUD_OFFSET = np.array([-0.36, 0.44, -0.41])
+        CLOUD_OFFSET = np.array([-0.198, 0.63, -0.371])
         GRASP_POINT = np.array([0.00300000003, 0.358999999, 0.583999991])
         CLOTH_GRASP_GOAL = GRASP_POINT + np.array([0, 1, 0])
         cloud = rotate_matrix(
@@ -287,6 +308,20 @@ class RhiVisEnv(RCareWorld):
             robot.directlyMoveTo(CLOTH_GRASP_GOAL)
             self.step()
 
+    def demo_human_only(self):
+        CLOUD_OFFSET = np.array([-0.198, 0.63, -0.371])
+        cloud = rotate_matrix(
+            self.point_cloud,
+            x_angle=0,
+            y_angle=-150,
+            z_angle=0,
+        )
+        cloud += CLOUD_OFFSET
+        self.cloud_manager.make_cloud(points=cloud, name="Human FK")
+
+        while True:
+            self.step()
+
     def fk_step(
         self,
         shoulder_angles: list,
@@ -296,13 +331,16 @@ class RhiVisEnv(RCareWorld):
             joint_name="RightUpperArm",
             position=shoulder_angles,
         )
-        self.person.setJointRotationByNameDirectly("RightLowerArm", elbow_angles)
+        self.person.setJointRotationByNameDirectly(
+            joint_name="RightLowerArm", position=elbow_angles
+        )
         self.step()
 
         self.list.append(self.person.getJointPositionByName("RightHand"))
 
     def fk_end(self, save: bool = False, visualize: bool = False):
-        as_np = np.array(self.list)
+        DISCARD = 2
+        as_np = np.array(self.list[DISCARD:])
 
         if save:
             # Save as_np as a file named evaluate_human_fk.npy

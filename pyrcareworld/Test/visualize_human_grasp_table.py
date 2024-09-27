@@ -19,6 +19,7 @@ OBJ_GRASP_OFFSET = [-0.05, -0.05, 0.03]
 
 # To be used with the Point Cloud Viz scene.
 if __name__ == "__main__":
+    point_cloud = np.load("pyrcareworld/Test/evaluate_human_fk_good1.npy")
     env = RhiVisEnv(
         executable_file="@editor",
         start_pos=START_POS,
@@ -27,6 +28,6 @@ if __name__ == "__main__":
         human_end_pos=HUMAN_END_POS,
         obj_grab_offset=OBJ_GRASP_OFFSET,
         # To visualize a real point cloud, pass it in here.
-        point_cloud="vis",
+        point_cloud=point_cloud,
     )
     env.demo()
