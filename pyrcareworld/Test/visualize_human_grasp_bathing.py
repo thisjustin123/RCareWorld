@@ -20,6 +20,7 @@ OBJ_GRASP_OFFSET = [0, -0.15, 0]
 
 # To be used with the Point Cloud Viz scene.
 if __name__ == "__main__":
+    point_cloud = np.load("pyrcareworld/Test/.out_points/9_limit_3_Learned.npy")
     env = RhiVisEnv(
         executable_file="@editor",
         start_pos=START_POS,
@@ -27,6 +28,15 @@ if __name__ == "__main__":
         handoff_pos=HANDOFF_POS,
         human_end_pos=HUMAN_END_POS,
         obj_grab_offset=OBJ_GRASP_OFFSET,
-        point_cloud_path="pyrcareworld/Test/evaluate_human_fk_good1.npy",
+        point_cloud=point_cloud,
     )
+
+    cloud_aligner = env.create_object(id=909, name="cloud_aligner", is_in_scene=True)
+    align_pos = np.array(cloud_aligner.getPosition())
+    align_rot = np.array(cloud_aligner.getRotation())
+    env.rotate_point_cloud(x=align_rot[0], y=align_rot[1], z=align_rot[2])
+    env.scale_point_cloud(x=1, y=1, z=-1)
+    env.reset_midpoint(align_pos)
+    env.make_cloud(name="instatest", radius=0.6)
+
     env.demo_bathing()

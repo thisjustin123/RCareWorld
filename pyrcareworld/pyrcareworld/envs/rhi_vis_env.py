@@ -1,5 +1,7 @@
+import math
 import random
 import numpy as np
+from scipy.spatial.transform import Rotation as R
 
 from pyrcareworld.envs.base_env import RCareWorld
 from pyrcareworld.agents.pointcloudmanager import PointCloudManager
@@ -50,6 +52,12 @@ def rotate_matrix(points, x_angle, y_angle, z_angle):
     rotated_points = np.dot(points, R.T)
 
     return rotated_points
+
+
+def euler_to_quaternion(roll, pitch, yaw):
+    rotation = R.from_euler("xyz", [roll, pitch, yaw], degrees=True)
+    quaternion = rotation.as_quat()  # Returns [x, y, z, w]
+    return quaternion
 
 
 class RhiVisEnv(RCareWorld):
@@ -109,6 +117,78 @@ class RhiVisEnv(RCareWorld):
         as_np = np.matmul(rotation_matrix, as_np.T).T
         return as_np
 
+    def scale_point_cloud(self, x, y, z):
+        """
+        Scales `self.point_cloud` by `x`, `y`, and `z`.
+
+        Args:
+            x (float): scale in x direction, in meters.
+            y (float): scale in y direction, in meters.
+            z (float): scale in z direction, in meters.
+        """
+        old_midpoint = np.mean(self.point_cloud, axis=0)
+
+        cloud = self.point_cloud
+        cloud = cloud * np.array([x, y, z])
+
+        # Renormalize to be around the old midpoint
+        new_midpoint = np.mean(cloud, axis=0)
+        cloud = cloud + old_midpoint
+        cloud = cloud - new_midpoint
+
+        self.point_cloud = cloud
+
+    def rotate_point_cloud(self, x, y, z):
+        """
+        Rotates `self.point_cloud` by `x`, `y`, and `z`.
+
+        Args:
+            x (float): rotation around x axis, in degrees.
+            y (float): rotation around y axis, in degrees.
+            z (float): rotation around z axis, in degrees.
+        """
+        cloud = self.point_cloud
+        cloud = rotate_matrix(
+            cloud,
+            x_angle=x,
+            y_angle=y,
+            z_angle=z,
+        )
+
+        self.point_cloud = cloud
+
+    def translate_point_cloud(self, x, y, z):
+        """
+        Translates `self.point_cloud` by `x`, `y`, and `z`.
+
+        Args:
+            x (float): translation in x direction, in meters.
+            y (float): translation in y direction, in meters.
+            z (float): translation in z direction, in meters.
+        """
+        cloud = self.point_cloud
+        cloud = cloud + np.array([x, y, z])
+        self.point_cloud = cloud
+
+    def reset_midpoint(self, pos):
+        """
+        Resets the midpoint of `self.point_cloud` to the given position.
+        """
+        old_midpoint = np.mean(self.point_cloud, axis=0)
+        self.point_cloud = self.point_cloud + pos
+        self.point_cloud = self.point_cloud - old_midpoint
+
+    def make_cloud(self, name: str, radius: float = 0.3):
+        """
+        Makes a point cloud using `self.point_cloud`.
+
+        Args:
+            name (str): The name of the point cloud.
+            radius (float): The radius of the point cloud.
+        """
+        self.cloud_manager.set_radius(radius)
+        self.cloud_manager.make_cloud(points=self.point_cloud.tolist(), name=name)
+
     def generate_random_points(self, count: int = 100):
         """
         Generates and returns `count` random points between -1 and 1.
@@ -132,74 +212,37 @@ class RhiVisEnv(RCareWorld):
             id=221584,
             robot_name="kinova_gen3_7dof-robotiq85",
             base_pos=[0, 0, -0.721000016],
-            gripper_list=[2215840],
+            gripper_list=[221584],
         )
         target_object = self.create_object(id=2, name="Duster", is_in_scene=True)
         start_pos = np.array(self.start_pos)
         end_pos = np.array(self.end_pos)
 
         duster_pos = np.array(target_object.getPosition())
-
+        eef_orn = None
         for _ in range(50):
             self.step()
-            robot.directlyMoveTo(start_pos)
+            robot.directlyMoveTo(start_pos, eef_orn)
 
         for i in range(150):
             pos = lerp(start_pos, duster_pos, i / 150)
-            robot.directlyMoveTo(pos)
+            robot.directlyMoveTo(pos, eef_orn)
             self.step()
 
         robot.GripperClose()
 
         for _ in range(60):
-            robot.directlyMoveTo(pos)
+            robot.directlyMoveTo(pos, eef_orn)
             self.step()
 
         # Here's where you'd visualize point cloud.
-
-        # TODO: Vis point cloud.
-        self.cloud_manager.set_radius(radius=0.5)
-        if self.point_cloud is not None:
-            CLOUD_OFFSET = np.array([0.34, 0.45, -0.03])
-            as_np = self.point_cloud
-            rotation_matrix = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
-            as_np = np.matmul(rotation_matrix, as_np.T).T
-            rotation_matrix_z = np.array([[0, 1, 0], [-1, 0, 0], [0, 0, 1]])
-            as_np = np.matmul(rotation_matrix_z, as_np.T).T
-            as_np[:, 2] = -as_np[:, 2]
-            theta = np.radians(30)  # Convert 30 degrees to radians
-            rotation_matrix = np.array(
-                [
-                    [np.cos(theta), -np.sin(theta), 0],
-                    [np.sin(theta), np.cos(theta), 0],
-                    [0, 0, 1],
-                ]
-            )
-            as_np = np.matmul(rotation_matrix, as_np.T).T
-
-            as_np += CLOUD_OFFSET
-            self.point_cloud = self.point_cloud + CLOUD_OFFSET
-            self.cloud_manager.make_cloud(
-                points=as_np.tolist(),
-                name="cloud",
-            )
-        else:
-            CLOUD_OFFSET = np.array([0.54, 0.25, 0])
-            self.cloud_manager.make_cloud(
-                points=self.generate_random_points() + CLOUD_OFFSET,
-                name="cloud",
-            )
-
-        for _ in range(100):
-            robot.directlyMoveTo(pos)
-            self.step()
 
         gripper_pos = np.array(duster_pos)
         invis_target_pos = np.array(self.handoff_pos)
 
         for i in range(150):
             pos = lerp(gripper_pos, invis_target_pos, i / 150)
-            robot.directlyMoveTo(pos)
+            robot.directlyMoveTo(pos, eef_orn)
             self.step()
 
         self.cloud_manager.remove_cloud(name="cloud")
@@ -227,11 +270,11 @@ class RhiVisEnv(RCareWorld):
 
         for i in range(150):
             pos = lerp(invis_target_pos, end_pos, i / 150)
-            robot.directlyMoveTo(pos)
+            robot.directlyMoveTo(pos, eef_orn)
             self.step()
 
         for i in range(300):
-            robot.directlyMoveTo(end_pos)
+            robot.directlyMoveTo(end_pos, eef_orn)
             self.step()
 
     def demo_bathing(self):
@@ -241,56 +284,39 @@ class RhiVisEnv(RCareWorld):
             base_pos=[-0.425999999, 0.619000018, 0.606999993],
             gripper_list=[221584],
         )
-        CLOUD_OFFSET = np.array([0.187999994, 1.18200004, -0.44600001])
-        GRASP_POINT = np.array([-0.108999997, 0.742999971, 0.361000001])
-        cloud = self.point_cloud
-        cloud = rotate_matrix(
-            cloud,
-            x_angle=0,
-            y_angle=180,
-            z_angle=0,
-        )
-        cloud = rotate_matrix(
-            cloud,
-            x_angle=0,
-            y_angle=0,
-            z_angle=-90,
-        )
-        cloud += CLOUD_OFFSET
-        self.cloud_manager.make_cloud(points=cloud, name="Human FK")
+        CLEAN_POS = np.array([0.152999997, 0.763999999, 0.280000001])
+
+        target_object = self.create_object(id=409, name="sponge", is_in_scene=True)
+        SPONGE_GRASP = np.array(target_object.getPosition())
 
         for _ in range(30):
-            robot.directlyMoveTo(GRASP_POINT)
+            robot.directlyMoveTo(SPONGE_GRASP)
             self.step()
 
-        robot.directlyMoveTo(GRASP_POINT)
+        robot.directlyMoveTo(SPONGE_GRASP)
         robot.GripperClose()
 
         for _ in range(30):
+            robot.directlyMoveTo(SPONGE_GRASP)
+            self.step()
+
+        for _ in range(30):
+            robot.directlyMoveTo(CLEAN_POS)
             self.step()
 
         while True:
-            robot.directlyMoveTo(GRASP_POINT)
+            robot.directlyMoveTo(CLEAN_POS, [0, -0.7071, 0, 0.7071])
             self.step()
 
     def demo_dressing(self):
         robot: Robot = self.create_robot(
             id=221584,
             robot_name="kinova_gen3_7dof-robotiq85",
-            base_pos=[-0.231, 0, 0],
+            base_pos=[0.469000012, 0.834999979, -0.0460000001],
             gripper_list=[221584],
         )
-        CLOUD_OFFSET = np.array([-0.198, 0.63, -0.371])
-        GRASP_POINT = np.array([0.00300000003, 0.358999999, 0.583999991])
-        CLOTH_GRASP_GOAL = GRASP_POINT + np.array([0, 1, 0])
-        cloud = rotate_matrix(
-            self.point_cloud,
-            x_angle=0,
-            y_angle=-150,
-            z_angle=0,
-        )
-        cloud += CLOUD_OFFSET
-        self.cloud_manager.make_cloud(points=cloud, name="Human FK")
+        GRASP_POINT = np.array([-0.0270000007, 0.87, 0.25999999])
+        CLOTH_GRASP_GOAL = GRASP_POINT + np.array([0, 0.2, 0])
 
         for _ in range(30):
             robot.directlyMoveTo(GRASP_POINT)
@@ -302,8 +328,8 @@ class RhiVisEnv(RCareWorld):
         for _ in range(30):
             self.step()
 
-        for i in range(300):
-            robot.directlyMoveTo(lerp(GRASP_POINT, CLOTH_GRASP_GOAL, i / 300))
+        for i in range(150):
+            robot.directlyMoveTo(lerp(GRASP_POINT, CLOTH_GRASP_GOAL, i / 150))
             self.step()
 
         while True:
@@ -322,6 +348,23 @@ class RhiVisEnv(RCareWorld):
         self.cloud_manager.make_cloud(points=cloud, name="Human FK")
 
         while True:
+            self.step()
+
+    def demo_rehab(self):
+        robot: Robot = self.create_robot(
+            id=221584,
+            robot_name="kinova_gen3_7dof-robotiq85",
+            base_pos=[0, 0, -0.721000016],
+            gripper_list=[221584],
+        )
+        target_object = self.create_object(id=77, name="goal", is_in_scene=True)
+        GOAL = np.array(target_object.getPosition())
+
+        self.person.ik_move_to(position=GOAL)
+        robot.GripperClose()
+
+        while True:
+            robot.directlyMoveTo(GOAL)
             self.step()
 
     def fk_step(
